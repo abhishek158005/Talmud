@@ -24,7 +24,7 @@ SAMPLE_SPREADSHEET_ID = '1dFcqBGnKJEwl4JCVq_bp-HRINR2hPXKZNy7S7SARZQQ' #GOOGLE S
 ```
 ### Run project
 ``` 
-git clone https://github.com/atulasati/Talmud-Selenium-GoogleSheetAPI.git 
+git clone https://github.com/abhishek158005/Talmud.git 
 cd Talmud-Selenium-GoogleSheetAPI
 pip install -r requirements.txt
 python talmud.py
