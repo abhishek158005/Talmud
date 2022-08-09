@@ -5,19 +5,17 @@ import pandas as pd
 from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
+from selenium. webdriver. common. keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException, NoSuchElementException
 
 import config
 import utils
 from helpers.g_sheet_handler import GoogleSheetHandler
 
 warnings.filterwarnings("ignore")
-
-ELEMENT_ID_INITIAL = 'ContentPlaceHolder1_tabInstituteDetails_InsDetails1_ucInstitutesDetails'
-STATUS_MODE = "מאושר לתמיכה"
 
 class DataScrapping():
     
@@ -44,56 +42,11 @@ class DataScrapping():
             print("  Login Failed !!\n")
             time.sleep(3)
     
-    def  Absorption(self):
-        data = GoogleSheetHandler(sheet_name='STUDENTS').getsheet_records()
-        data = data[2:]
-        df = pd.DataFrame(data, columns=[str(x) for x in range(len(data[0]))])
-        df.rename(columns={'0':'dob', '2':'id_ type', '4':'id'}, inplace=True)
-
-        self.browser.implicitly_wait(20)
-        self.browser.find_element_by_id(f'ucTalmudSideBar_tvTalmudn{self.page_no}').click()
-        self.browser.implicitly_wait(20)
-        self.browser.find_element_by_id('ucTalmudSideBar_tvTalmudt5').click()
-        for x in range(2):
-            print(x)
-            self.browser.implicitly_wait(20)
-            self.browser.find_element_by_id('ContentPlaceHolder1_tabStudyTypeDetails_StudentList_tab').click()
-            self.browser.implicitly_wait(20)
-            self.browser.find_element_by_id('ContentPlaceHolder1_btnStudentAcceptence3').click()
-            self.browser.implicitly_wait(20); time.sleep(5)
-            input = WebDriverWait(self.browser, 20).until(EC.visibility_of_element_located((By.XPATH, '/html/body/form/div[3]/div[5]/div[1]/div/div[6]/div[2]/div/div/div[2]/div[3]/div[5]/div/div/div/table/tbody/tr/td/table/tbody/tr[3]/td/input')))
-            key = df['id'][x]
-            print('===============',key)
-            input.send_keys(key)
-            # self.browser.find_element_by_xpath('//*[@id="ContentPlaceHoldter1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_txtIdentifier"]').send_keys('12345')
-            # self.browser.implicitly_wait(20)
-            # /self.browser.find_element_by_id('ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_LinkButton1').click()
-            WebDriverWait(self.browser,10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_LinkButton1"]'))).click()
-            pop_up_text = WebDriverWait(self.browser,10).until(EC.visibility_of_element_located((By.ID, 'ucMessagePopUp_lblMessage')))
-            # pop_up_text = self.browser.find_element_by_id('ucMessagePopUp_lblMessage')
-            # ucMessagePopUp_lblMessage
-            # pprint(self.browser.page_source)
-            print(pop_up_text.text)
-            self.pop_up_text[self.page_no] = pop_up_text.text            
-            
-            try:
-                self.browser.find_element_by_id('ucMessagePopUp_spanBtnOk').click()#ucMessagePopUp_spanBtnCancel
-            except:
-                self.browser.find_element_by_id('ucMessagePopUp_spanBtnCancel').click()
-
-        print(self.pop_up_text)
-        self.browser.get(config.WEB_LINK)
-        
-    def logout(self):
-        self.user_login = False
-        self.browser.find_element_by_id('ucTalmudHeader_ucLogOut_lnkLogOut').click(); time.sleep(3)
-        self.browser.find_element_by_id('ucTalmudHeader_ucLogOut_btnOk').click(); time.sleep(3)
-        print('Logged out user(%s) successfully!\n' %self.username)
-        time.sleep(3)
-
     def get_page(self):
         if self.user_login:
             self.page_no += 1
+            if self.page_no >=2:
+                return False
             try:
                 print("\n\t = = = = = = = = = = [PAGE-NO: ", self.page_no, "] = = = = = = = = = =")
                 self.page = self.browser.find_element_by_id(f'ucTalmudSideBar_tvTalmudt{self.page_no}')
@@ -102,6 +55,75 @@ class DataScrapping():
             except:
                 print('No more pages!')
             return False
+
+    def transfer_student(self):
+        passport_df = utils.passport_data()
+        branch_code_df = utils.branchcode_data()
+
+        for idx in range(len(passport_df)):
+            branch = int(branch_code_df['branch'][idx][5:])+1
+            self.browser.implicitly_wait(20)
+            self.browser.find_element_by_id(f'ucTalmudSideBar_tvTalmudn{branch}').click()
+            self.browser.implicitly_wait(20)
+            code_idx=4
+            while True:
+                try:
+                    ele = self.browser.find_element_by_id(f'ucTalmudSideBar_tvTalmudt{code_idx}')
+                    if branch_code_df['code'][idx] in ele.text:
+                        ele.click()
+                        break
+                    code_idx += 1
+                except NoSuchElementException:
+                    code_idx += 1
+        
+            self.browser.implicitly_wait(20)
+            self.browser.find_element_by_id('ContentPlaceHolder1_tabStudyTypeDetails_StudentList_tab').click()
+            self.browser.implicitly_wait(20)
+            self.browser.find_element_by_id('ContentPlaceHolder1_btnStudentAcceptence3').click()
+            self.browser.implicitly_wait(20); time.sleep(5)
+            if passport_df['id_type'][idx] == 'דרכון':
+                WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_ddlPopIdentityType'))).click()
+                WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_ddlPopIdentityType"]/option[3]'))).click()
+                WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_ddlCountryOfOrigine'))).click()
+                time.sleep(3)
+                countries = WebDriverWait(self.browser, 10).until(EC.visibility_of_all_elements_located((By.ID, 'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_ddlCountryOfOrigine')))
+                for country in countries:
+                    try:
+                        if country.text == passport_df['country'][idx]:
+                            time.sleep(3)
+                            country.click()
+                            break
+                        else:
+                            country.send_keys(Keys.PAGE_DOWN)
+                    except ElementClickInterceptedException:
+                        print('Exception Occurred!')
+                        pass
+                WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_txtIdentifier'))).send_keys(passport_df['id'][idx])
+                WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_ctlBirthDate_txtDate'))).send_keys(passport_df['dob'][idx])
+            else:    
+                key = passport_df['id'][idx]
+                input = WebDriverWait(self.browser, 20).until(EC.visibility_of_element_located((By.XPATH, '/html/body/form/div[3]/div[5]/div[1]/div/div[6]/div[2]/div/div/div[2]/div[3]/div[5]/div/div/div/table/tbody/tr/td/table/tbody/tr[3]/td/input')))
+                input.send_keys(key)
+            WebDriverWait(self.browser,10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_LinkButton1"]'))).click()
+            pop_up_text = WebDriverWait(self.browser,10).until(EC.visibility_of_element_located((By.ID, 'ucMessagePopUp_lblMessage')))
+            print(pop_up_text.text)
+            self.pop_up_text[passport_df['id'][idx]] = pop_up_text.text            
+                
+            try:
+                WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_spanBtnOk'))).click()
+                GoogleSheetHandler(data=[[self.pop_up_text[passport_df['id'][idx]], 'OK']], sheet_name='STUDENTS').appendsheet_records_x()
+            except TimeoutException:
+                WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_spanBtnCancel'))).click()
+                GoogleSheetHandler(data=[['NO', self.pop_up_text[passport_df['id'][idx]]]], sheet_name='STUDENTS').appendsheet_records_z()
+
+
+    def logout(self):
+        self.user_login = False
+        self.browser.find_element_by_id('ucTalmudHeader_ucLogOut_lnkLogOut').click(); time.sleep(3)
+        self.browser.find_element_by_id('ucTalmudHeader_ucLogOut_btnOk').click(); time.sleep(3)
+        print('Logged out user(%s) successfully!\n' %self.username)
+        time.sleep(3)
+
 
     def push_data_to_drive(self):
         print(f"\t\t[Pushing data to drive for user - {self.username}]")
@@ -134,8 +156,8 @@ if __name__=='__main__':
             print('===========================')
 
             while scrapper.get_page():
-                scrapper.Absorption()
-            scrapper.push_data_to_drive()
+                scrapper.transfer_student()
+            # scrapper.push_data_to_drive()
             scrapper.logout()
 
         print("End activity for user!\n\n")

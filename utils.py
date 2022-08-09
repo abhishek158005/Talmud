@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 import threading
 import time
 from datetime import datetime
+from helpers.g_sheet_handler import GoogleSheetHandler
+
 
 def get_table_df(page_source, table_id):
     soup = BeautifulSoup(page_source, 'html.parser')
@@ -10,15 +12,16 @@ def get_table_df(page_source, table_id):
     df = pd.read_html(str(tables))[0].dropna(how='all')
     return df.fillna('')
 
-def flattened_data(scrapper):
-    result = []
-    for page in range(1, scrapper.page_no):
-        try:
-            row = [datetime.now().strftime("%Y-%m-%d, %H:%M:%S")] +\
-                    scrapper.pop_up_text[page]
-            print(row)
+def passport_data():
+    data = GoogleSheetHandler(sheet_name='STUDENTS').get_passport_records()
+    data = data[2:]
+    df = pd.DataFrame(data, columns=[str(x) for x in range(len(data[0]))])
+    df.rename(columns={'0':'dob', '2':'id_type', '3': 'country', '4':'id'}, inplace=True)
+    return df
 
-            result.append(row)
-        except KeyError:
-            continue
-    return result
+def branchcode_data():
+    data = GoogleSheetHandler(sheet_name='STUDENTS').get_branch_records()
+    data = data[2:]
+    df = pd.DataFrame(data, columns=[str(x) for x in range(len(data[0]))])
+    df.rename(columns={'0':'branch', '3':'code'}, inplace=True)
+    return df
