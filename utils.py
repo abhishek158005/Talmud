@@ -1,10 +1,41 @@
-import pandas as pd
-from bs4 import BeautifulSoup
-import threading
 import time
+import threading
+import pandas as pd
+import datetime as dt
 from datetime import datetime
+from bs4 import BeautifulSoup
 from helpers.g_sheet_handler import GoogleSheetHandler
 
+
+MONTH_DICT = {
+    '01':'Jan', 
+    '02':'Feb', 
+    '03':'Mar', 
+    '04':'Apr', 
+    '05':'May', 
+    '06':'Jun', 
+    '07':'Jul', 
+    '08':'Aug', 
+    '09':'Sep', 
+    '10':'Oct', 
+    '11':'Nov', 
+    '12':'Dec'
+}
+
+GENDER_DICT = {
+    'choice' :1,
+    'male' : 2,
+    'female' : 3
+}
+
+MARRIEGE_DICT = {
+    'choice' : 1,
+    'Single': 2,
+    'married' : 3,
+    'Polygamous': 4,
+    'divorce': 5,
+    'widowed': 6
+ }
 
 def get_table_df(page_source, table_id):
     soup = BeautifulSoup(page_source, 'html.parser')
@@ -12,16 +43,34 @@ def get_table_df(page_source, table_id):
     df = pd.read_html(str(tables))[0].dropna(how='all')
     return df.fillna('')
 
+
 def passport_data():
     data = GoogleSheetHandler(sheet_name='STUDENTS').get_passport_records()
     data = data[2:]
     df = pd.DataFrame(data, columns=[str(x) for x in range(len(data[0]))])
-    df.rename(columns={'0':'dob', '2':'id_type', '3': 'country', '4':'id'}, inplace=True)
+    df.rename(columns={'2':'dob', '4':'id_type', '5': 'country', '6':'id','0':'first_name' ,'1':'last_name','empty':'3'}, inplace=True)
     return df
 
+def student_data():
+    data = GoogleSheetHandler(sheet_name='STUDENTS').get_student_detail()
+    data = data[2:]
+    df = pd.DataFrame(data, columns=[str(x) for x in range(len(data[0]))])
+    df.rename(columns={'0':'father_name', '3':'immigration_date', '4': 'gender', '2':'marriege_date','1':'marriege_status'}, inplace=True)
+    return df  
 def branchcode_data():
     data = GoogleSheetHandler(sheet_name='STUDENTS').get_branch_records()
     data = data[2:]
     df = pd.DataFrame(data, columns=[str(x) for x in range(len(data[0]))])
     df.rename(columns={'0':'branch', '3':'code'}, inplace=True)
     return df
+   
+
+def get_calendar_selected_date(from_month):
+    return MONTH_DICT.get(from_month)
+
+
+def get_gender(gender):
+    return GENDER_DICT.get(gender)   
+
+def get_marriege_status(status):
+    return MARRIEGE_DICT.get(status)     

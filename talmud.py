@@ -85,23 +85,35 @@ class DataScrapping():
             self.browser.implicitly_wait(20); time.sleep(5)
             if passport_df['id_type'][idx] == 'דרכון':
                 WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_ddlPopIdentityType'))).click()
+                time.sleep(3)
                 WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_ddlPopIdentityType"]/option[3]'))).click()
+                time.sleep(3)
                 WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_ddlCountryOfOrigine'))).click()
                 time.sleep(3)
-                countries = WebDriverWait(self.browser, 10).until(EC.visibility_of_all_elements_located((By.ID, 'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_ddlCountryOfOrigine')))
+                # countries = WebDriverWait(self.browser, 10).until(EC.visibility_of_all_elements_located((By.ID, 'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_ddlCountryOfOrigine')))
+
+                countries = WebDriverWait(self.browser, 10).until(EC.presence_of_all_elements_located((By.XPATH, '//*[@id="ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_ddlCountryOfOrigine"]/option')))
+                # print(len(countries))
+                # print(countries.text)
                 for country in countries:
                     try:
-                        if country.text == passport_df['country'][idx]:
+                        # if country.text == passport_df['country'][idx]:
+                        # if passport_df['country'][idx] in country.text:
+                        if country.text in passport_df['country'][idx]:
+                            print("we got it")
                             time.sleep(3)
                             country.click()
                             break
                         else:
-                            country.send_keys(Keys.PAGE_DOWN)
+                            # country.send_keys(Keys.PAGE_DOWN)
+                            self.browser.execute_script("arguments[0].scrollIntoView()",country)
                     except ElementClickInterceptedException:
                         print('Exception Occurred!')
                         pass
                 WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_txtIdentifier'))).send_keys(passport_df['id'][idx])
-                WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_ctlBirthDate_txtDate'))).send_keys(passport_df['dob'][idx])
+                # WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_ctlBirthDate_txtDate'))).send_keys(passport_df['dob'][idx])
+                WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_ctlBirthDate_txtDate'))).send_keys('20051952')
+                print('------------------:', type(passport_df['dob'][idx]))
             else:    
                 key = passport_df['id'][idx]
                 input = WebDriverWait(self.browser, 20).until(EC.visibility_of_element_located((By.XPATH, '/html/body/form/div[3]/div[5]/div[1]/div/div[6]/div[2]/div/div/div[2]/div[3]/div[5]/div/div/div/table/tbody/tr/td/table/tbody/tr[3]/td/input')))
