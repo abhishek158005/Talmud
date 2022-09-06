@@ -26,7 +26,19 @@ class GoogleSheetHandler:
                                         range ="USERS!B1:C3").execute()
         get_values = result.get('values' , [])
         print('Username & Password Fetched Successfully!')
+        print(get_values)
         return get_values
+
+
+    def get_student_detail(self):
+
+        """Fetching Student Details """
+        result = self.sheet.values().get(spreadsheetId = config.SAMPLE_SPREADSHEET_ID, 
+                                        range ="STUDENTS!AA:AE").execute()
+        get_values = result.get('values' , [])
+        print('Student Details Successfully Fetched')
+        print(get_values)
+        return get_values        
 
 
     def getsheet_id(self):
@@ -42,7 +54,7 @@ class GoogleSheetHandler:
         """ Fetching the records from Google Sheet """
         
         result = self.sheet.values().get(spreadsheetId = config.SAMPLE_SPREADSHEET_ID,
-                                    range = F'{self.sheet_name}!G:C' ).execute()
+                                    range = F'{self.sheet_name}!G:A' ).execute()
         get_values = result.get('values', [])
         print(f"GoogleSheet[{self.sheet_name}]: Records Fetched Successfully")
         return get_values
@@ -93,3 +105,4 @@ class GoogleSheetHandler:
         request = self.sheet.values().clear(spreadsheetId = config.SAMPLE_SPREADSHEET_ID, range="").execute()
         print("Records Cleared Successfully!")
         return request
+
