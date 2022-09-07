@@ -90,15 +90,18 @@ class DataScrapping():
                     self.browser.implicitly_wait(10); time.sleep(5)
                     existing_msg= self.student_exist_or_not(idx, passport_df)
                     if 'סטודנט זה כבר רשום במוסד אחר' in existing_msg:
+                        self.pop_up_text[passport_df['id'][idx]] = existing_msg
+                        self.append_data_to_sheet(passport_df, idx)
                         print("This student is already registered at another institution.")
                         continue
                     if "התלמיד כבר קיים במוסד ובסוג לימוד הבאים!" in existing_msg:
+                        self.pop_up_text[passport_df['id'][idx]] = existing_msg
+                        self.append_data_to_sheet(passport_df, idx)
                         time.sleep(5)
-                        WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="ucMessagePopUp_divMessageBox"]/div[3]/div'))).click()
                         print('\n\n\t',{'message': 'Student Already Exist!!'})
+                        WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="ucMessagePopUp_divMessageBox"]/div[3]/div'))).click()
                         continue
                     else:    
-                        print('Going for Submission Form')
                         time.sleep(3)
                         confirmation_msg =self.submission_form(idx, passport_df, student_df, study_code)
                         if confirmation_msg is None or confirmation_msg == '':
@@ -109,7 +112,8 @@ class DataScrapping():
                             print("* * & & % % === Successfully Submit Form === % % & & * *")
                         try:
                             pop_up_text = WebDriverWait(self.browser,10).until(EC.visibility_of_element_located((By.ID, 'ucMessagePopUp_lblMessage')))
-                            self.pop_up_text[passport_df['id'][idx]] = pop_up_text.text  
+                            self.pop_up_text[passport_df['id'][idx]] = existing_msg
+                            self.append_data_to_sheet(passport_df,idx)  
                         except:
                             pass                
                         try:
@@ -122,7 +126,6 @@ class DataScrapping():
                 except Exception as err: 
                     if err:
                         print(f'{err} Occured!')
-                        print('\n\n\tSkipping this ID')
                     continue
                     
             
@@ -192,6 +195,16 @@ class DataScrapping():
             existing_msg = ''
         return existing_msg
 
+    def append_data_to_sheet(self,passport_df,idx):
+        try:
+            WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_spanBtnOk'))).click()
+            GoogleSheetHandler(data=[[self.pop_up_text[passport_df['id'][idx]], 'OK']], sheet_name='STUDENTS').appendsheet_records_x()
+        except TimeoutException:
+            WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_spanBtnCancel'))).click()
+            GoogleSheetHandler(data=[['NO', self.pop_up_text[passport_df['id'][idx]]]], sheet_name='STUDENTS').appendsheet_records_z()
+        
+
+
     def continue_or_cancel(self):
         try:
             to_check =  WebDriverWait(self.browser,10).until(EC.visibility_of_element_located((By.ID, 'ucMessagePopUp_lblMessage'))).text
@@ -216,14 +229,12 @@ class DataScrapping():
     def submission_form(self, idx, passport_df, student_df, study_code):
         time.sleep(4)
         current_url = self.browser.current_url
-        print(type(current_url))
-        print("44455= = = ",current_url)
         if current_url == "https://talmud.edu.gov.il/Students/StudentsDetails.aspx?":
+            print('[ == ** && $$ == I Am Going To Submit A Form == $$ && ** == ]')
             try:
                 WebDriverWait(self.browser, 5).until(EC.visibility_of_element_located((By.ID,'ContentPlaceHolder1_TabsStudent_StudentDetails1_ucStudentDetails_txtFirstName'))).send_keys(passport_df['first_name'][idx])
                 WebDriverWait(self.browser, 5).until(EC.visibility_of_element_located((By.ID,'ContentPlaceHolder1_TabsStudent_StudentDetails1_ucStudentDetails_txtLastName'))).send_keys(passport_df['last_name'][idx])
                 if not student_df['father_name'][idx]:
-                    print("entering father name1")
                     print("Father's name not available, setting it to DEFAULT: [No Data Found]")
                     student_df['father_name'][idx] = 'לא נמצאו נתונים'
                 else:
@@ -231,18 +242,14 @@ class DataScrapping():
                     WebDriverWait(self.browser, 10).until(EC.visibility_of_element_located((By.ID,'ContentPlaceHolder1_TabsStudent_StudentDetails1_ucStudentDetails_txtFatherName'))).send_keys(student_df['father_name'][idx])
                 GENDER = utils.get_gender(student_df['gender'][idx])
                 if not GENDER:
-                    print("gender not found")
                     print("Gender Not Availabe setting DEFAULT : [MALE]")
                     time.sleep(4)
                     WebDriverWait(self.browser, 10).until(EC.visibility_of_element_located((By.XPATH,f'//*[@id="ContentPlaceHolder1_TabsStudent_StudentDetails1_ucStudentDetails_ddlGender"]//option[2]'))).click()
                 else:    
-                    print("gender  found")
                     time.sleep(4)
                     WebDriverWait(self.browser, 10).until(EC.visibility_of_element_located((By.XPATH,f'//*[@id="ContentPlaceHolder1_TabsStudent_StudentDetails1_ucStudentDetails_ddlGender"]//option[{GENDER}]'))).click()
-                print('status')
                 STATUS = utils.get_marriege_status(student_df['marriege_status'][idx])
                 time.sleep(4)
-                print('status found')
                 if not student_df['marriege_date'][idx]:
                     student_df['marriege_date'][idx] = '01/01/2020'
                 if not STATUS:
@@ -277,8 +284,6 @@ class DataScrapping():
         else:
             print("url not match")
             return ''
-
-
 
 
 if __name__=='__main__':
