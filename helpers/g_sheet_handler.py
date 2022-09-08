@@ -26,7 +26,7 @@ class GoogleSheetHandler:
                                         range ="USERS!B1:C3").execute()
         get_values = result.get('values' , [])
         print('Username & Password Fetched Successfully!')
-        print(get_values)
+        # print(get_values)
         return get_values
 
 
@@ -37,7 +37,7 @@ class GoogleSheetHandler:
                                         range ="STUDENTS!AA:AE").execute()
         get_values = result.get('values' , [])
         print('Student Details Successfully Fetched')
-        print(get_values)
+        # print(get_values)
         return get_values        
 
 
@@ -82,12 +82,12 @@ class GoogleSheetHandler:
     def appendsheet_records_x(self):
         
         """ Appending/Inserting record in Google Sheet """
-        rng = {'sheetId': '1192773689', 'startRowIndex': 3, 'startColumnIndex': 23}
-        fields = 'userEnteredValue'
-        body = {'requests': [{'updateCells': {'rows': self.data, 'range': rng, 'fields': fields}}]}
-        request = self.sheet.batchUpdate(spreadsheetId=config.SAMPLE_SPREADSHEET_ID, body=body)
-        # request = self.sheet.values().update(spreadsheetId = config.SAMPLE_SPREADSHEET_ID, range=f'STUDENTS!X:Z', 
-        #     valueInputOption="USER_ENTERED", body={"values":self.data}).execute()
+        # rng = {'sheetId': '1192773689', 'startRowIndex': 3, 'startColumnIndex': 23}
+        # fields = 'userEnteredValue'
+        # body = {'requests': [{'updateCells': {'rows': self.data, 'range': rng, 'fields': fields}}]}
+        # request = self.sheet.batchUpdate(spreadsheetId=config.SAMPLE_SPREADSHEET_ID, body=body)
+        request = self.sheet.values().update(spreadsheetId = config.SAMPLE_SPREADSHEET_ID, range=f'STUDENTS!X3:Z', 
+            valueInputOption="USER_ENTERED", body={"values":self.data}).execute()
         
         print("Record Inserted Successfully!")
         return request
