@@ -1,5 +1,6 @@
 import sys
 import time
+import json
 import utils
 import config
 import warnings
@@ -31,7 +32,7 @@ class DataScrapping():
         self.user_login = False
         
         self.invalid_id = False
-        self.pop_up_text= {}
+        self.pop_up_text = []
 
     def login_to_site(self):
         print("Start user login..")
@@ -90,62 +91,48 @@ class DataScrapping():
                     self.browser.implicitly_wait(10); time.sleep(5)
                     existing_msg= self.student_exist_or_not(idx, passport_df)
                     if 'סטודנט זה כבר רשום במוסד אחר' in existing_msg:
-                        self.pop_up_text[passport_df['id'][idx]] = existing_msg
-                        self.append_data_to_sheet(passport_df, idx)
+                        self.pop_up_text.append([existing_msg, 'NO', ''])
+                        # self.append_data_to_sheet(passport_df, idx)
                         print("This student is already registered at another institution.")
                         continue
                     if "התלמיד כבר קיים במוסד ובסוג לימוד הבאים!" in existing_msg:
-                        self.pop_up_text[passport_df['id'][idx]] = existing_msg
-                        self.append_data_to_sheet(passport_df, idx)
+                        self.pop_up_text.append([existing_msg, 'NO', ''])
+                        # self.append_data_to_sheet(passport_df, idx)
                         time.sleep(5)
-                        print('\n\n\t',{'message': 'Student Already Exist!!'})
+                        print('\n\t',{'Student Already Exist!!'})
                         WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="ucMessagePopUp_divMessageBox"]/div[3]/div'))).click()
                         continue
                     else:    
                         time.sleep(3)
+                        # print('Checking if the STUDENT ID is NEW or NOT!!')
                         confirmation_msg =self.submission_form(idx, passport_df, student_df, study_code)
                         if confirmation_msg is None or confirmation_msg == '':
+                            self.pop_up_text.append([confirmation_msg, 'NO', ''])
+
                             continue
                         if confirmation_msg == "שמירת תלמיד בוצעה בהצלחה":
                             time.sleep(5)
+                            self.pop_up_text.append(['', 'YES', confirmation_msg])
                             WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID,'ucMessagePopUp_divbuttonwrapper'))).click()
                             print("* * & & % % === Successfully Submit Form === % % & & * *")
                         try:
                             pop_up_text = WebDriverWait(self.browser,10).until(EC.visibility_of_element_located((By.ID, 'ucMessagePopUp_lblMessage')))
-                            self.pop_up_text[passport_df['id'][idx]] = existing_msg
-                            self.append_data_to_sheet(passport_df,idx)  
+                            self.pop_up_text.append([pop_up_text.text, 'NO', ''])
+                            # self.append_data_to_sheet(passport_df,idx)  
                         except:
                             pass                
-                        try:
-                            WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_spanBtnOk'))).click()
-                            GoogleSheetHandler(data=[[self.pop_up_text[passport_df['id'][idx]], 'OK']], sheet_name='STUDENTS').appendsheet_records_x()
-                        except TimeoutException:
-                            WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_spanBtnCancel'))).click()
-                            GoogleSheetHandler(data=[['NO', self.pop_up_text[passport_df['id'][idx]]]], sheet_name='STUDENTS').appendsheet_records_z()
                 
                 except Exception as err: 
                     if err:
                         print(f'{err} Occured!')
                     continue
-                    
             
         except Exception as err:
             print(f"{err} Occured!")
             WebDriverWait(self.browser,15).until(EC.element_to_be_clickable((By.ID,'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_LinkButton2'))).click()
                 
-                   
+        # self.push_data_to_sheet()              
 
-    def logout(self):
-        self.user_login = False
-        self.browser.find_element(By.ID,'ucTalmudHeader_ucLogOut_lnkLogOut').click(); time.sleep(3)
-        self.browser.find_element(By.ID,'ucTalmudHeader_ucLogOut_btnOk').click(); time.sleep(3)
-        print('Logged out user(%s) successfully!\n' %self.username)
-        time.sleep(3)
-
-    def push_data_to_drive(self):
-        print(f"\t\t[Pushing data to drive for user - {self.username}]")
-        data = utils.flattened_data(self)
-        GoogleSheetHandler(data=data, sheet_name=config.SHEET_NAME).appendsheet_records()
 
     def student_exist_or_not(self, idx, passport_df):
         if passport_df['id_type'][idx] == 'דרכון':
@@ -177,6 +164,7 @@ class DataScrapping():
         try:
             invalid = self.browser.find_element(By.ID, 'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_cvalID').text
             if invalid == 'מספר זהות לא חוקי':
+                self.pop_up_text.append([invalid, 'NO', ''])
                 print("\n\tInvalid ID, Skipping this ID")
                 time.sleep(5)
                 WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_LinkButton2'))).click()
@@ -187,42 +175,31 @@ class DataScrapping():
         if not self.invalid_id:
             self.continue_or_cancel()
         try:
-    
-            # existing_msg = WebDriverWait(self.browser, 10).until(EC.visibility_of_element_located((By.ID,'ucMessagePopUp_lblMessage'))).text
             existing_msg = WebDriverWait(self.browser, 10).until(EC.visibility_of_element_located((By.ID,'ucMessagePopUp_lblMessage'))).text
-            print("existing_msg = ",existing_msg)
         except TimeoutException:
             existing_msg = ''
         return existing_msg
-
-    def append_data_to_sheet(self,passport_df,idx):
-        try:
-            WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_spanBtnOk'))).click()
-            GoogleSheetHandler(data=[[self.pop_up_text[passport_df['id'][idx]], 'OK']], sheet_name='STUDENTS').appendsheet_records_x()
-        except TimeoutException:
-            WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_spanBtnCancel'))).click()
-            GoogleSheetHandler(data=[['NO', self.pop_up_text[passport_df['id'][idx]]]], sheet_name='STUDENTS').appendsheet_records_z()
         
-
-
     def continue_or_cancel(self):
         try:
             to_check =  WebDriverWait(self.browser,10).until(EC.visibility_of_element_located((By.ID, 'ucMessagePopUp_lblMessage'))).text
-            to_confirm = WebDriverWait(self.browser,10).until(EC.visibility_of_element_located((By.ID, 'ucMessagePopUp_lblMessage'))).text
+            # to_confirm = WebDriverWait(self.browser,10).until(EC.visibility_of_element_located((By.ID, 'ucMessagePopUp_lblMessage'))).text
             """click on continue or cancel"""
             if "תלמיד זה רשום כבר במוסד אחר." in to_check:
                 # print("enter in to_check block")
                 WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_spanBtnOk'))).click() #continue
                 # WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_btnMCancel'))).click() #cancel
                 time.sleep(5)
+                self.pop_up_text.append([to_check, 'YES', ''])
                 success = WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_lblMessage'))).text
                 # print("Enter Into Success block")
-                print("This is first time that we are getting this popup box")
+                # print("This is first time that we are getting this popup box")
                 if success == '':
                     pass
                 # WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_btnMCancel'))).click() #success 
-            if to_confirm == 'התלמיד נמצא בתהליך מעבר בין מוסדות אין אפשרות לקלוט אותו':
+            if 'התלמיד נמצא בתהליך מעבר בין מוסדות אין אפשרות לקלוט אותו' in to_check:
                 WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_spanBtnCancel'))).click() #continue
+                self.pop_up_text.append([to_check, 'NO', ''])
         except TimeoutException:
             pass
 
@@ -282,9 +259,27 @@ class DataScrapping():
             except Exception as err:
                 print("Error ===: ",err)   
         else:
-            print("url not match")
+            # print("\tEither the ID is already exists or already registered with another instituin or Invalid ID")
             return ''
 
+    def logout(self):
+        try:
+            self.user_login = False
+            self.browser.find_element(By.ID,'ucTalmudHeader_ucLogOut_lnkLogOut').click(); time.sleep(3)
+            self.browser.find_element(By.ID,'ucTalmudHeader_ucLogOut_btnOk').click(); time.sleep(3)
+            print('Logged out user(%s) successfully!\n' %self.username)
+            time.sleep(3)
+        except:
+            pass
+
+    def push_data_to_sheet(self):
+        print(f"\t\t[Pushing data to drive for user - {self.username}]")
+        data_li = self.pop_up_text
+
+        print(data_li)
+        df = pd.DataFrame(data_li)
+        df.to_csv('popup_msgs.csv')
+        GoogleSheetHandler(data=data_li, sheet_name='STUDENTS').appendsheet_records_x()
 
 if __name__=='__main__':
     args = len(sys.argv)
@@ -313,7 +308,7 @@ if __name__=='__main__':
 
             while scrapper.get_page():
                 scrapper.transfer_student()
-            # scrapper.push_data_to_drive()
+            scrapper.push_data_to_sheet()
             scrapper.logout()
 
         print("End activity for user!\n\n")
