@@ -94,6 +94,8 @@ class DataScrapping():
                         self.pop_up_text.append([existing_msg, 'NO', ''])
                         # self.append_data_to_sheet(passport_df, idx)
                         print("This student is already registered at another institution.")
+                        
+                        WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_btnMOK'))).click()
                         continue
                     if "התלמיד כבר קיים במוסד ובסוג לימוד הבאים!" in existing_msg:
                         self.pop_up_text.append([existing_msg, 'NO', ''])
@@ -106,8 +108,9 @@ class DataScrapping():
                         time.sleep(3)
                         # print('Checking if the STUDENT ID is NEW or NOT!!')
                         confirmation_msg =self.submission_form(idx, passport_df, student_df, study_code)
+                        print(confirmation_msg)
                         if confirmation_msg is None or confirmation_msg == '':
-                            self.pop_up_text.append([confirmation_msg, 'NO', ''])
+                            # self.pop_up_text.append([confirmation_msg, 'NO', ''])
 
                             continue
                         if confirmation_msg == "שמירת תלמיד בוצעה בהצלחה":
@@ -129,8 +132,10 @@ class DataScrapping():
             
         except Exception as err:
             print(f"{err} Occured!")
-            WebDriverWait(self.browser,15).until(EC.element_to_be_clickable((By.ID,'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_LinkButton2'))).click()
-                
+            try:
+                WebDriverWait(self.browser,15).until(EC.element_to_be_clickable((By.ID,'ContentPlaceHolder1_tabStudyTypeDetails_StudentList_ucStudentsSearchDetails_LinkButton2'))).click()
+            except:
+                pass
         # self.push_data_to_sheet()              
 
 
@@ -275,7 +280,6 @@ class DataScrapping():
     def push_data_to_sheet(self):
         print(f"\t\t[Pushing data to drive for user - {self.username}]")
         data_li = self.pop_up_text
-
         print(data_li)
         df = pd.DataFrame(data_li)
         df.to_csv('popup_msgs.csv')
@@ -291,7 +295,8 @@ if __name__=='__main__':
         options.headless = True
         browser = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     else:
-        browser = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+        options.add_argument('--log-level=3')
+        browser = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
     print(" * *  * *  * *  * *  * *  * * START  * *  * *  * *  * *  * * ")
     action = ActionChains(browser)
