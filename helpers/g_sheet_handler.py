@@ -1,4 +1,6 @@
 import config
+import pandas as pd
+import numpy as np
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
@@ -23,7 +25,7 @@ class GoogleSheetHandler:
 
         """Fetching Username & Password """
         result = self.sheet.values().get(spreadsheetId = config.SAMPLE_SPREADSHEET_ID, 
-                                        range ="USERS!B1:C3").execute()
+                                        range ="USERS!A1:C3").execute()
         get_values = result.get('values' , [])
         print('Username & Password Fetched Successfully!')
         # print(get_values)
@@ -36,6 +38,7 @@ class GoogleSheetHandler:
         result = self.sheet.values().get(spreadsheetId = config.SAMPLE_SPREADSHEET_ID, 
                                         range ="STUDENTS!AA:AE").execute()
         get_values = result.get('values' , [])
+        # print(get_values)
         print('Student Details Successfully Fetched')
         # print(get_values)
         return get_values        
@@ -82,16 +85,35 @@ class GoogleSheetHandler:
     def appendsheet_records_x(self):
         
         """ Appending/Inserting record in Google Sheet """
-        # rng = {'sheetId': '1192773689', 'startRowIndex': 3, 'startColumnIndex': 23}
-        # fields = 'userEnteredValue'
-        # body = {'requests': [{'updateCells': {'rows': self.data, 'range': rng, 'fields': fields}}]}
-        # request = self.sheet.batchUpdate(spreadsheetId=config.SAMPLE_SPREADSHEET_ID, body=body)
         request = self.sheet.values().update(spreadsheetId = config.SAMPLE_SPREADSHEET_ID, range=f'STUDENTS!X3:Z', 
             valueInputOption="USER_ENTERED", body={"values":self.data}).execute()
         
         print("Record Inserted Successfully!")
         return request
 
+    def get_popup_records(self):
+        
+        """ Fetching the records from Google Sheet """
+        
+        result = self.sheet.values().get(spreadsheetId = config.SAMPLE_SPREADSHEET_ID,
+                                    range = F'{self.sheet_name}!X:Z' ).execute()
+        get_values = result.get('values', [])
+        return get_values  
+    
+    def get_sheet_pop_up_records(self):
+        
+        """ Fetching the records from Google Sheet """
+        result = self.sheet.values().get(spreadsheetId = config.SAMPLE_SPREADSHEET_ID,
+                                    range = f'STUDENTS!X:Z' ).execute()
+        get_values = result.get('values', [])
+        max_length = self.get_passport_records()
+        for i in range(len(max_length)):
+            if len(get_values) != len(max_length):
+                for i in range(len(max_length) - len(get_values)):
+                    get_values.append(['', '', ''])
+        df = pd.DataFrame(get_values[2:], columns = get_values[0])
+
+        return df   
 
     def appendsheet_records_z(self):
         
@@ -99,7 +121,6 @@ class GoogleSheetHandler:
 
         request = self.sheet.values().append(spreadsheetId = config.SAMPLE_SPREADSHEET_ID, range=f'{self.sheet_name}!Y3:AA3', 
             valueInputOption="USER_ENTERED", body={"values":self.data}).execute()
-        
         print("Record Inserted Successfully!")
         return request
 
@@ -110,4 +131,5 @@ class GoogleSheetHandler:
         print("Records Cleared Successfully!")
         return request
 
-# GoogleSheetHandler().appendsheet_records_x()
+# t= GoogleSheetHandler(data=None, sheet_name='STUDENTS')
+# print(t.get_sheet_pop_up_records())
