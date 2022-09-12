@@ -1,6 +1,5 @@
-import time
-import threading
 import pandas as pd
+import numpy as np
 import datetime as dt
 from datetime import datetime
 from bs4 import BeautifulSoup
@@ -43,7 +42,6 @@ def get_table_df(page_source, table_id):
     df = pd.read_html(str(tables))[0].dropna(how='all')
     return df.fillna('')
 
-
 def passport_data():
     data = GoogleSheetHandler(sheet_name='STUDENTS').get_passport_records()
     data = data[2:]
@@ -53,24 +51,50 @@ def passport_data():
 
 def student_data():
     data = GoogleSheetHandler(sheet_name='STUDENTS').get_student_detail()
-    data = data[2:]
+    for i in data:
+        if len(i)<5:
+            for j in range(5-len(i)):
+                i.append('')
+    data = data[1:]
     df = pd.DataFrame(data, columns=[str(x) for x in range(len(data[0]))])
+    # print(df)
     df.rename(columns={'0':'father_name', '3':'immigration_date', '4': 'gender', '2':'marriege_date','1':'marriege_status'}, inplace=True)
-    return df  
+    return df 
+    
+
 def branchcode_data():
-    data = GoogleSheetHandler(sheet_name='STUDENTS').get_branch_records()
-    data = data[2:]
+    data = GoogleSheetHandler(sheet_name='STUDENTS').get_branch_records()           
+    for i in data:
+        if len(i)<2:
+            for j in range(2-len(i)):
+                i.append('')
+    data = data[1:]
     df = pd.DataFrame(data, columns=[str(x) for x in range(len(data[0]))])
     df.rename(columns={'0':'branch', '3':'code'}, inplace=True)
     return df
-   
 
+def user_data():
+    data = GoogleSheetHandler(sheet_name='STUDENTS').get_user_password()
+    df = pd.DataFrame(data[1:], columns=data[0])
+    return df
+   
 def get_calendar_selected_date(from_month):
     return MONTH_DICT.get(from_month)
-
 
 def get_gender(gender):
     return GENDER_DICT.get(gender)   
 
 def get_marriege_status(status):
-    return MARRIEGE_DICT.get(status)     
+    return MARRIEGE_DICT.get(status)  
+
+def popup_data():
+    data = GoogleSheetHandler(sheet_name='STUDENTS').get_popup_records()
+    for i in data:
+        if len(i)<3:
+            i.append(''*(3-len(i)))      
+    df = pd.DataFrame(data[1:], columns=data[0])
+    return df
+    
+def sheet_data_pop_up():
+    data = GoogleSheetHandler(sheet_name='STUDENTS').get_sheet_pop_up_records()
+    return data
