@@ -57,7 +57,6 @@ def student_data():
                 i.append('')
     data = data[1:]
     df = pd.DataFrame(data, columns=[str(x) for x in range(len(data[0]))])
-    # print(df)
     df.rename(columns={'0':'father_name', '3':'immigration_date', '4': 'gender', '2':'marriege_date','1':'marriege_status'}, inplace=True)
     return df 
     
@@ -97,4 +96,5 @@ def popup_data():
     
 def sheet_data_pop_up():
     data = GoogleSheetHandler(sheet_name='STUDENTS').get_sheet_pop_up_records()
+    # data.replace('', np.nan)
     return data

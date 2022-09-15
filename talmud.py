@@ -130,8 +130,7 @@ class DataScrapping():
                         try:
                             pop_up_text = WebDriverWait(self.browser,10).until(EC.visibility_of_element_located((By.ID, 'ucMessagePopUp_lblMessage')))
 
-                            self.pop_up_text.append([pop_up_text.text, 'NO', '', self.passport_df['id'][idx]])
-                            # self.append_data_to_sheet(self.passport_df,idx)  
+                            self.pop_up_text.append([pop_up_text.text, 'NO', '', self.passport_df['id'][idx]]) 
                         except:
                             pass                
                 
@@ -139,7 +138,6 @@ class DataScrapping():
                     if err:
                         print(f'{err} Occured!')
                     continue
-            # scrap_df = pd.DataFrame(self.pop_up_text, columns = ['POP MESSAGE', 'SUCCESS', 'POPUP WARNING'])
 
         except Exception as err:
             print(f"{err} Occured!")
@@ -148,7 +146,6 @@ class DataScrapping():
             except:
                 pass
         self.push_data_to_sheet()              
-
 
     def student_exist_or_not(self, idx):
         if self.passport_df['id_type'][idx] == 'דרכון' or self.passport_df['id_type'][idx] == 'password':
@@ -193,7 +190,6 @@ class DataScrapping():
             print('NoSuchElementException')
             pass
         if not self.invalid_id:
-            # print('now i am calling continue or cancel = === == = =')
             self.continue_or_cancel(idx)
         self.invalid_id = False
         try:
@@ -206,14 +202,12 @@ class DataScrapping():
         try:
             to_check =  WebDriverWait(self.browser,10).until(EC.visibility_of_element_located((By.ID, 'ucMessagePopUp_lblMessage'))).text
             """click on continue or cancel"""
+            # time.sleep(900)
             if "תלמיד זה רשום כבר במוסד אחר." in to_check:
-
                 WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_spanBtnOk'))).click() #continue
                 time.sleep(5)
                 self.pop_up_text.append([to_check, 'YES', '', self.passport_df['id'][idx]])
                 success = WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_lblMessage'))).text
-   
-                # print("This is first time that we are getting this popup box")
                 if success == '':
                     pass
             if 'התלמיד נמצא בתהליך מעבר בין מוסדות אין אפשרות לקלוט אותו' in to_check:
@@ -222,7 +216,10 @@ class DataScrapping():
 
             if 'הסטודנט כבר קיים במוסד ובסוג הלימוד הבאים!' in to_check:
                 WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_spanBtnCancel'))).click() #continue
-                self.pop_up_text.append([to_check, 'NO', '', self.passport_df['id'][idx]])    
+                self.pop_up_text.append([to_check, 'NO', '', self.passport_df['id'][idx]]) 
+            if 'אם לתלמיד קיימים לימודים של בוקר, אחה"צ, שירות אזרחי או יום שלם - הם יסתיימו החל מרגע זה' in to_check:
+                WebDriverWait(self.browser, 10).until(EC.element_to_be_clickable((By.ID, 'ucMessagePopUp_spanBtnCancel'))).click() #continue
+                self.pop_up_text.append([to_check, 'NO', '', self.passport_df['id'][idx]]) 
         except TimeoutException:
             print('i did not get any message inside continue or cancel function ==  = =')
             pass
@@ -301,28 +298,21 @@ class DataScrapping():
         data_li = self.pop_up_text
 
         scrap_df = pd.DataFrame(data_li, columns=["POP MESSAGE", "SUCCESS", "POPUP WARNING", "ID"])
-        print("scrap df =======\n\n",scrap_df)
-        # scrap_df.to_csv('popup_msgs.csv')
         sheet_df = utils.sheet_data_pop_up()
         sheet_df['ID'] = self.passport_df['id']
-
-        print("sheet df =======\n\n",sheet_df)
-        j= 0
-        for i in range(len(self.passport_df['id'])):
+        j = 0
+        for i in range(len(sheet_df['ID'])):
             if j < len(scrap_df['ID']):
+            # sheet_df.loc[(sheet_df['SUCCESS'] == '') & (sheet_df['ID'].isin(scrap_df['ID'])), ["POP MESSAGE", "SUCCESS", "POPUP WARNING", "ID"]] = scrap_df[["POP MESSAGE", "SUCCESS", "POPUP WARNING", "ID"]]
+
                 if (sheet_df['SUCCESS'][i] == '') & (sheet_df['ID'][i] == scrap_df['ID'][j]):
                     sheet_df['SUCCESS'][i] = scrap_df['SUCCESS'][j]
                     sheet_df['POP MESSAGE'][i] = scrap_df['POP MESSAGE'][j]
                     sheet_df['POPUP WARNING'][i] = scrap_df['POPUP WARNING'][j]
                     j += 1
-        # sheet_df.loc[(sheet_df['SUCCESS'] == '') & (sheet_df['ID'].isin(scrap_df['ID'])), ["POP MESSAGE", "SUCCESS", "POPUP WARNING", "ID"]] = scrap_df[["POP MESSAGE", "SUCCESS", "POPUP WARNING", "ID"]]
-        print('this sheet df data....',sheet_df)
-        print("========================================this is true ===========================")
         sheet_df = sheet_df.replace(np.nan, "'", regex=True)
         sheet_df = sheet_df.replace("'", "", regex=True)
-        print('this sheet1 df data....',sheet_df)
         sheet_df = sheet_df.drop(columns=['ID'])
-        print('this sheet2 df data....',sheet_df)
         print("now i am pushing the data in google sheet")
         GoogleSheetHandler(data=sheet_df.values.tolist()).appendsheet_records_x()
         # GoogleSheetHandler(data=sheet_df, sheet_name='STUDENTS').appendsheet_records_z()
@@ -342,6 +332,8 @@ if __name__=='__main__':
         browser = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
     print(" * *  * *  * *  * *  * *  * * START  * *  * *  * *  * *  * * ")
+    t= GoogleSheetHandler(data=None, sheet_name='STUDENTS')
+    t.appendsheet_records_y()
     action = ActionChains(browser)
     users = utils.user_data()
     branch_code_df = utils.branchcode_data()
@@ -359,4 +351,4 @@ if __name__=='__main__':
             scrapper.logout()
 
         print("End activity for user!\n\n")
-    browser.close()
+    # browser.close()
