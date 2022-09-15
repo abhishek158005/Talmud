@@ -25,10 +25,10 @@ class GoogleSheetHandler:
 
         """Fetching Username & Password """
         result = self.sheet.values().get(spreadsheetId = config.SAMPLE_SPREADSHEET_ID, 
-                                        range ="USERS!A1:C3").execute()
+                                        range ="USERS!A:C").execute()
         get_values = result.get('values' , [])
         print('Username & Password Fetched Successfully!')
-        # print(get_values)
+        print(get_values)
         return get_values
 
 
@@ -83,6 +83,7 @@ class GoogleSheetHandler:
         return request
 
     def appendsheet_records_x(self):
+        print("this is our data for saving ======\n\n",self.data)
         
         """ Appending/Inserting record in Google Sheet """
         request = self.sheet.values().update(spreadsheetId = config.SAMPLE_SPREADSHEET_ID, range=f'STUDENTS!X3:Z', 
@@ -90,6 +91,13 @@ class GoogleSheetHandler:
         
         print("Record Inserted Successfully!")
         return request
+
+    def appendsheet_records_y(self):
+        max_length = len(self.get_passport_records())
+        self.data = [["'"]]
+        request = self.sheet.values().update(spreadsheetId = config.SAMPLE_SPREADSHEET_ID, range=f'STUDENTS!X{max_length-1}:Z', 
+            valueInputOption="USER_ENTERED", body={"values":self.data}).execute()
+        return request    
 
     def get_popup_records(self):
         
@@ -107,13 +115,24 @@ class GoogleSheetHandler:
                                     range = f'STUDENTS!X:Z' ).execute()
         get_values = result.get('values', [])
         max_length = self.get_passport_records()
-        for i in range(len(max_length)):
-            if len(get_values) != len(max_length):
-                for i in range(len(max_length) - len(get_values)):
-                    get_values.append(['', '', ''])
+        k = 0
+        print(len(get_values))
+        for j in range(len(max_length)):
+            # if len(get_values[j]) != len(max_length[j]):
+                # for i in range(len(max_length[i]) - len(get_values[i])):
+            if len(get_values) > j :    
+                print(get_values[j])    
+                print(len(get_values[j]))  
+                if len(get_values[j]) < 3:
+                    for i in range(3 - len(get_values[j])):
+                        get_values[j].append('')
+            else:
+                get_values.append(["","",""])            
+        # print(get_values)            
         df = pd.DataFrame(get_values[2:], columns = get_values[0])
-
-        return df   
+        # print('df:', df)
+        return df
+   
 
     def appendsheet_records_z(self):
         
@@ -131,5 +150,6 @@ class GoogleSheetHandler:
         print("Records Cleared Successfully!")
         return request
 
+
 # t= GoogleSheetHandler(data=None, sheet_name='STUDENTS')
-# print(t.get_sheet_pop_up_records())
+# t.get_sheet_pop_up_records()
